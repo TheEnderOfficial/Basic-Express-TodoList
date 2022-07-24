@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TODO LIST</title>
+</head>
+
+<body>
+    <ul id="items">
+
+    </ul>
+
+    <div class="form">
+        <input type="text" id="todo_name" placeholder="Название задачи">
+        <input type="submit" id="add_todo" value="Добавить">
+    </div>
+
+    <script>
+        let addTodoBtn = document.getElementById('add_todo');
+
+
+        function addTodoBtnHandler(event) {
+            event.preventDefault();
+            let todoName = document.getElementById('todo_name').value;
+            addTodo(todoName);
+        }
+
+        function addTodo(todoName) {
+            fetch("/api/createTodo", {
+                method: "POST", headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json"
+                }, body: JSON.stringify({ todoName: todoName })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    refreshTodos();
+                });
+        }
+
+        function renderTodo(todo) {
+            let todoLi = document.createElement('li');
+
+            let todoCheckbox = document.createElement('input');
+            todoCheckbox.type = 'checkbox';
+            todoCheckbox.checked = todo.completed;
+
+            let todoSpan = document.createElement('span');
+            todoSpan.innerText = todo.todo_name;
+            todoSpan.style.textDecoration = todo.completed ? 'line-through' : 'none';
+
+            let todoRemover = document.createElement('a');
+            todoRemover.innerText = 'X';
+            todoRemover.href = '#';
+            todoRemover.style.marginLeft = '25px';
+
+            todoLi.appendChild(todoCheckbox);
+            todoLi.appendChild(todoSpan);
+            todoLi.appendChild(todoRemover);
+
+            let ul = document.getElementById('items');
+            ul.appendChild(todoLi);
+
+            todoCheckbox.addEventListener('change', function (event) {
+                console.log(todo.todo_name, event.target.checked)
+                fetch("/api/changeTodo", {
+                    method: "POST", headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json"
+                    }, body: JSON.stringify({ id: todo.id, data: { completed: event.target.checked } })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data);
+                        refreshTodos();
+                    });
+            });
+
+            todoRemover.addEventListener('click', function (event) {
+                event.preventDefault();
+                removeTodo(todo.id)
+            });
+        }
+
+        function renderTodos(todos) {
+            todos.forEach(renderTodo);
+        }
+
+        function refreshTodos() {
+
+            fetch("/api/getTodos", { method: "GET" })
+                .then(response => response.json())
+                .then(data => {
+                    let ul = document.getElementById('items');
+                    ul.innerHTML = '';
+                    renderTodos(data);
+                })
+                .catch(error => console.log(error));
+        }
+
+        function removeTodo(id) {
+            fetch("/api/removeTodo", {
+                method: "POST", headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json"
+                }, body: JSON.stringify({ id: id })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    refreshTodos();
+                });
+        }
+
+        function init() {
+            addTodoBtn.addEventListener('click', addTodoBtnHandler);
+            refreshTodos();
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
